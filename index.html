@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1769ff">
+<title>Study Star</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#edf3ff;
+  color:#222;
+  padding:20px;
+}
+.box{
+  max-width:400px;
+  margin:60px auto;
+  background:white;
+  padding:25px;
+  border-radius:18px;
+  text-align:center;
+  box-shadow:0 4px 18px #ccd5e5;
+}
+input,button{
+  width:100%;
+  padding:14px;
+  margin:9px 0;
+  border-radius:9px;
+  font-size:16px;
+}
+input{border:1px solid #bbb}
+button{
+  border:0;
+  background:#1769ff;
+  color:white;
+  font-weight:bold;
+}
+.hidden{display:none}
+#clock{
+  font-size:30px;
+  color:#1769ff;
+  font-weight:bold;
+  margin:20px 0;
+}
+#date{font-size:18px}
+#msg{color:#1769ff}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN PAGE -->
+<div class="box" id="login">
+  <h1>⭐ Study Star</h1>
+  <h3>Email Login</h3>
+
+  <input id="email" type="email"
+  placeholder="Enter your email">
+
+  <button id="sendButton" onclick="sendOTP()">
+    Send OTP
+  </button>
+
+  <input id="otp" class="hidden"
+  placeholder="Enter Email OTP">
+
+  <button id="verifyButton" class="hidden"
+  onclick="verifyOTP()">
+    Verify OTP
+  </button>
+
+  <p id="msg"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div class="box hidden" id="dashboard">
+  <h1>Welcome ⭐</h1>
+  <h2>Study Star Dashboard</h2>
+
+  <p id="date"></p>
+  <div id="clock"></div>
+
+  <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+
+// SUPABASE CONFIG
+const SUPABASE_URL =
+"https://hjbqokiadrjhfrrdemae.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_GAZceNPRrqcIW8kdHdm22Q_7nNmbKwO";
+
+const db = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+// MESSAGE
+function message(text){
+  document.getElementById("msg").textContent=text;
+}
+
+// SEND OTP
+async function sendOTP(){
+
+  const email =
+  document.getElementById("email").value.trim();
+
+  if(!email){
+    message("Please enter your email.");
+    return;
+  }
+
+  message("Sending OTP...");
+
+  const {error} = await db.auth.signInWithOtp({
+    email:email
+  });
+
+  if(error){
+    message(error.message);
+    return;
+  }
+
+  document.getElementById("otp").classList.remove("hidden");
+  document.getElementById("verifyButton").classList.remove("hidden");
+
+  message("OTP sent. Check your email.");
+}
+
+// VERIFY OTP
+async function verifyOTP(){
+
+  const email =
+  document.getElementById("email").value.trim();
+
+  const token =
+  document.getElementById("otp").value.trim();
+
+  if(!email || !token){
+    message("Enter email and OTP.");
+    return;
+  }
+
+  message("Verifying...");
+
+  const {error} = await db.auth.verifyOtp({
+    email:email,
+    token:token,
+    type:"email"
+  });
+
+  if(error){
+    message(error.message);
+    return;
+  }
+
+  showDashboard();
+}
+
+// SHOW DASHBOARD
+function showDashboard(){
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+  updateClock();
+}
+
+// LIVE DATE AND TIME
+function updateClock(){
+
+  const now = new Date();
+
+  document.getElementById("date").textContent =
+  now.toLocaleDateString("en-IN",{
+    weekday:"long",
+    day:"2-digit",
+    month:"long",
+    year:"numeric"
+  });
+
+  document.getElementById("clock").textContent =
+  now.toLocaleTimeString("en-IN");
+}
+
+setInterval(updateClock,1000);
+
+// LOGOUT
+async function logout(){
+
+  const {error} = await db.auth.signOut();
+
+  if(error){
+    message(error.message);
+    return;
+  }
+
+  document.getElementById("dashboard").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+  document.getElementById("otp").value="";
+  message("Logged out successfully.");
+}
+
+// CHECK EXISTING LOGIN
+async function checkLogin(){
+
+  const {data,error} = await db.auth.getSession();
+
+  if(!error && data.session){
+    showDashboard();
+  }
+}
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_OUT"){
+    document.getElementById("dashboard").classList.add("hidden");
+    document.getElementById("login").classList.remove("hidden");
+  }
+});
+
+checkLogin();
+
+</script>
+</body>
+</html>
